@@ -18,38 +18,55 @@
 /////////////////////////////////////////////////////
 
 #include "Arduino.h"
-
 typedef __cdecl void (*gpio_set_callback)(uint32_t value, void* state);
 typedef __cdecl uint8_t (*gpio_get_callback)(void* state);
-typedef __cdecl int (*hardware_configure_fn)(int prop, void* data, size_t size);
-typedef __cdecl int (*hardware_connect_fn)(uint8_t pin, gpio_get_callback getter, gpio_set_callback setter, void* state);
-typedef __cdecl int (*hardware_update_fn)(void);
-typedef __cdecl int (*hardware_pin_change_fn)(uint8_t pin, uint32_t value);
-typedef __cdecl int (*hardware_transfer_bits_spi_fn)(uint8_t* data, size_t size_bits);
-typedef __cdecl int (*hardware_transfer_bytes_i2c_fn)(const uint8_t* in, size_t in_size, uint8_t* out, size_t* in_out_out_size);
-typedef __cdecl int (*hardware_attach_log_fn)(hardware_log_callback);
-typedef struct hardware_handle {
+class hardware_interface {
+public:
+    virtual int __cdecl CanConfigure() =0;
+    virtual int __cdecl Configure(int prop, 
+                            void* data, 
+                            size_t size) =0;
+    virtual int __cdecl CanConnect() =0;
+    virtual int __cdecl Connect(uint8_t pin, 
+                            gpio_get_callback getter, 
+                            gpio_set_callback setter, 
+                            void* state) =0;
+    virtual int __cdecl CanUpdate() =0;
+    virtual int __cdecl Update() =0;
+    virtual int __cdecl CanPinChange() =0;
+    virtual int __cdecl PinChange(uint8_t pin, 
+                            uint32_t value) =0;
+    virtual int __cdecl CanTransferBitsSPI() =0;
+    virtual int __cdecl TransferBitsSPI(uint8_t* data, 
+                                    size_t size_bits) =0;
+    virtual int __cdecl CanTransferBytesI2C() =0;
+    virtual int __cdecl TransferBytesI2C(const uint8_t* in, 
+                                    size_t in_size, 
+                                    uint8_t* out, 
+                                    size_t* in_out_out_size) =0;
+    virtual int __cdecl CanAttachLog() =0;
+    virtual int __cdecl AttachLog(hardware_log_callback logger, 
+                            const char* prefix, 
+                            uint8_t level) =0;
+    virtual int __cdecl Destroy() = 0;
+};
+typedef __cdecl int (*hardware_create_fn)(hardware_interface** out_hw);
+typedef struct hardware_dev {
     HMODULE hmodule;
-    hardware_configure_fn configure;
-    hardware_connect_fn connect;
-    hardware_update_fn update;
-    hardware_pin_change_fn pin_change;
-    hardware_transfer_bits_spi_fn transfer_bits_spi;
-    hardware_transfer_bytes_i2c_fn transfer_bytes_i2c;
-    hardware_attach_log_fn attach_log;
-    hardware_handle* next;
-} hardware_handle_t;
+    hardware_interface* hardware;
+    hardware_dev* next;
+} hardware_dev_t;
 typedef struct hardware_connection {
-    hardware_handle_t* hardware;
+    hardware_dev_t* handle;
     uint8_t pin;
     hardware_connection* next;
 } hardware_connection_t;
 typedef struct hardware_spi_list {
-    hardware_transfer_bits_spi_fn fn;
+    hardware_dev_t* handle;
     hardware_spi_list* next;
 } hardware_spi_list_t;
 typedef struct hardware_i2c_list {
-    hardware_transfer_bytes_i2c_fn fn;
+    hardware_dev_t* handle;
     hardware_i2c_list* next;
 } hardware_i2c_list_t;
 void __attribute__((weak)) winduino() {
@@ -123,21 +140,21 @@ typedef struct gpio {
                 return false;
         }
     }
-    bool connect(hardware_handle_t* hw, uint8_t pin) {
-        if (hw == nullptr) {
+    bool connect(hardware_dev_t* hw, uint8_t pin) {
+        if (hw == nullptr || !hw->hardware->CanConnect()) {
             return false;
         }
         hardware_connection_t* con = new hardware_connection_t();
         if (con == nullptr) {
             return false;
         }
-        if (0 != hw->connect(pin, get_pin, set_pin, this)) {
+        if (0 != hw->hardware->Connect(pin, get_pin, set_pin, this)) {
             delete con;
             return false;
         }
 
         con->next = nullptr;
-        con->hardware = hw;
+        con->handle = hw;
         con->pin = pin;
         if (m_connect_list == nullptr) {
             m_connect_list = con;
@@ -169,15 +186,15 @@ typedef struct gpio {
     void notify_changed() {
         hardware_connection_t* p = m_connect_list;
         while (p != nullptr) {
-            if (p->hardware->pin_change != nullptr) {
-                p->hardware->pin_change(p->pin, m_value);
+            if (p->handle->hardware->CanPinChange()) {
+                p->handle->hardware->PinChange(p->pin, m_value);
             }
             p = p->next;
         }
     }
 } gpio_t;
 
-static hardware_handle_t* hardware_head;
+static hardware_dev_t* hardware_head;
 static hardware_spi_list_t* spi_devices[SPI_PORT_MAX] = {nullptr};
 static hardware_i2c_list_t* i2c_devices[I2C_PORT_MAX] = {nullptr};
 static gpio_t gpios[256];
@@ -253,10 +270,10 @@ static DWORD render_thread_proc(void* state) {
 
     bool quit = false;
     while (!quit) {
-        hardware_handle_t* hw = hardware_head;
+        hardware_dev_t* hw = hardware_head;
         while (hw != nullptr) {
-            if (hw->update != nullptr) {
-                hw->update();
+            if (hw->hardware->CanUpdate()) {
+                hw->hardware->Update();
             }
             hw = hw->next;
         }
@@ -675,6 +692,7 @@ int main(int argc, char* argv[]) {
     if (app_thread == NULL) {
         goto exit;
     }
+    
     // main message pump
     while (!should_quit) {
         DWORD result = 0;
@@ -768,6 +786,7 @@ exit:
     render_bitmap->Release();
     d2d_factory->Release();
     CoUninitialize();
+    
 }
 
 void pinMode(uint8_t pin, uint8_t mode) {
@@ -830,24 +849,21 @@ void* hardware_load(const char* name) {
     if (h == NULL) {
         return nullptr;
     }
-    hardware_handle_t* result = new hardware_handle_t();
+    hardware_dev_t* result = new hardware_dev_t();
     if (result == nullptr) {
         return nullptr;
     }
     result->next = nullptr;
     result->hmodule = h;
-    result->configure = (hardware_configure_fn)GetProcAddress(h, "Configure");
-    result->connect = (hardware_connect_fn)GetProcAddress(h, "Connect");
-    result->update = (hardware_update_fn)GetProcAddress(h, "Update");
-    result->pin_change = (hardware_pin_change_fn)GetProcAddress(h, "PinChange");
-    result->transfer_bits_spi = (hardware_transfer_bits_spi_fn)GetProcAddress(h, "TransferBitsSPI");
-    result->transfer_bytes_i2c = (hardware_transfer_bytes_i2c_fn)GetProcAddress(h, "TransferBytesI2C");
-    result->attach_log = (hardware_attach_log_fn)GetProcAddress(h, "AttachLog");
-
+    
+    hardware_create_fn create= (hardware_create_fn)GetProcAddress(h, "CreateHardware");
+    if(create==NULL || 0!=create(&result->hardware) || result->hardware==NULL) {
+        return nullptr;
+    }
     if (hardware_head == nullptr) {
         hardware_head = result;
     } else {
-        hardware_handle_t* p = hardware_head;
+        hardware_dev_t* p = hardware_head;
         while (p != nullptr) {
             if (p->next == nullptr) {
                 p->next = result;
@@ -862,16 +878,19 @@ bool hardware_set_pin(hw_handle_t hw, uint8_t mcu_pin, uint8_t hw_pin) {
     if (hw == nullptr) {
         return false;
     }
-    return gpios[mcu_pin].connect((hardware_handle_t*)hw, hw_pin);
+    return gpios[mcu_pin].connect((hardware_dev_t*)hw, hw_pin);
 }
 
 bool hardware_configure(hw_handle_t hw, int prop, void* data, size_t size) {
     if (hw == nullptr) {
         return false;
     }
-    hardware_handle_t* h = (hardware_handle_t*)hw;
-    if (h->configure == nullptr) return false;
-    return 0 == h->configure(prop, data, size);
+    hardware_dev_t* h = (hardware_dev_t*)hw;
+
+    if (!h->hardware->CanConfigure()) { 
+        return false;
+    }
+    return 0 == h->hardware->Configure(prop, data, size);
 }
 bool hardware_transfer_bits_spi(uint8_t port,uint8_t* data, size_t size_bits) {
     if(port>=SPI_PORT_MAX) {
@@ -879,7 +898,9 @@ bool hardware_transfer_bits_spi(uint8_t port,uint8_t* data, size_t size_bits) {
     }
     hardware_spi_list_t* current = spi_devices[port];
     while(current!=nullptr) {
-        current->fn(data,size_bits);
+        if(current->handle->hardware->CanTransferBitsSPI()) {
+            current->handle->hardware->TransferBitsSPI(data,size_bits);
+        }
         current=current->next;
     }
     
@@ -889,18 +910,12 @@ bool hardware_transfer_bytes_i2c(uint8_t port,const uint8_t* in, size_t in_size,
     if(port>=I2C_PORT_MAX) {
         return false;
     }
-    hardware_spi_list_t* current = spi_devices[port];
+    hardware_i2c_list_t* current = i2c_devices[port];
     while(current!=nullptr) {
-        //current->fn(in,in_size,);
-        current=current->next;
-    }
-    
-    hardware_handle_t* h = hardware_head;
-    while (h != nullptr) {
-        if (h->transfer_bytes_i2c != nullptr) {
-            h->transfer_bytes_i2c(in, in_size, out, in_out_out_size);
+        if(current->handle->hardware->CanTransferBytesI2C()) {
+            current->handle->hardware->TransferBytesI2C(in,in_size,out,in_out_out_size);
         }
-        h = h->next;
+        current=current->next;
     }
     return true;
 }
@@ -908,13 +923,13 @@ bool hardware_transfer_bytes_i2c(uint8_t port,const uint8_t* in, size_t in_size,
 static void logger_log(const char* text) {
     Serial.println(text);
 }
-bool hardware_attach_log(void* hw) {
+bool hardware_attach_log(void* hw,const char* prefix, uint8_t level) {
     if (hw == nullptr) {
         return false;
     }
-    hardware_handle_t* h = (hardware_handle_t*)hw;
-    if (h->attach_log != nullptr) {
-        h->attach_log(logger_log);
+    hardware_dev_t* h = (hardware_dev_t*)hw;
+    if(h->hardware->CanAttachLog()) {
+        h->hardware->AttachLog(logger_log,prefix,level);
     }
     return true;
 }
@@ -923,12 +938,12 @@ bool hardware_attach_spi(hw_handle_t hw, uint8_t port) {
     if(port>=SPI_PORT_MAX) {
         return false;
     }
-    hardware_handle_t* h = (hardware_handle_t*)hw;
-    if(h->transfer_bits_spi==nullptr) {
+    hardware_dev_t* h = (hardware_dev_t*)hw;
+    if(!h->hardware->CanTransferBitsSPI()) {
         return false;
     }
     hardware_spi_list_t* result = new hardware_spi_list_t();
-    result->fn = h->transfer_bits_spi;
+    result->handle = h;
     result->next = nullptr;
     if (spi_devices[port] == nullptr) {
         spi_devices[port] = result;
@@ -949,12 +964,12 @@ bool hardware_attach_i2c(hw_handle_t hw, uint8_t port) {
     if(port>=I2C_PORT_MAX) {
         return false;
     }
-    hardware_handle_t* h = (hardware_handle_t*)hw;
-    if(h->transfer_bytes_i2c==nullptr) {
+    hardware_dev_t* h = (hardware_dev_t*)hw;
+    if(!h->hardware->CanTransferBytesI2C()) {
         return false;
     }
     hardware_i2c_list_t* result = new hardware_i2c_list_t();
-    result->fn = h->transfer_bytes_i2c;;
+    result->handle = h;
     result->next = nullptr;
     if (i2c_devices[port] == nullptr) {
         i2c_devices[port] = result;

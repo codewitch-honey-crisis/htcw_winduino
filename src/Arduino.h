@@ -211,7 +211,7 @@ bool hardware_transfer_bytes_i2c(uint8_t port,const uint8_t*in, size_t in_size, 
 /// @brief Attaches the logging system to the hardware so that it can log to the console
 /// @param hw A handle to the hardware
 /// @return True if successful, otherwise false
-bool hardware_attach_log(hw_handle_t hw);
+bool hardware_attach_log(hw_handle_t hw, const char* prefix="", uint8_t level=255);
 /// @brief Attaches hardware to an SPI port
 /// @param hw The hardware handle
 /// @param port The SPI port to attach to
