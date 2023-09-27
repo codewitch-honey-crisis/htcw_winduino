@@ -12,8 +12,15 @@
 #ifndef I2C_PORT_MAX
 #define I2C_PORT_MAX 4
 #endif
+#ifndef WIRE_INTERFACES_COUNT
+#define WIRE_INTERFACES_COUNT I2C_PORT_MAX
+#endif
+
 #ifndef SPI_PORT_MAX
 #define SPI_PORT_MAX 6
+#endif
+#ifndef SPI_INTERFACES_COUNT
+#define SPI_INTERFACES_COUNT SPI_PORT_MAX
 #endif
 #ifndef SOC_UART_NUM
 #define SOC_UART_NUM 4
