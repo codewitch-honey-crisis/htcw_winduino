@@ -158,7 +158,7 @@ void analogWrite(uint8_t pin, int value);
 uint16_t analogRead(uint8_t pin);
 inline void analogWriteResolution(uint8_t bits) {}
 const char * pathToFileName(const char * path);
-void append_log_window(const char* text);
+void log_print(const char* text);
 void yield();
 /// @brief The start routine - similar to main()
 void setup();

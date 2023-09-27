@@ -462,7 +462,7 @@ void delayMicroseconds(uint32_t us) {
 }
 
 // write to the log window
-void append_log_window(const char* text) {
+void log_print(const char* text) {
     static wchar_t sz[65536];
     if(text==nullptr || text[0]==0) {
         return;
