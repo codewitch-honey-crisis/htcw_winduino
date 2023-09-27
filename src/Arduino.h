@@ -15,6 +15,10 @@
 #ifndef SPI_PORT_MAX
 #define SPI_PORT_MAX 6
 #endif
+#ifndef SOC_UART_NUM
+#define SOC_UART_NUM 4
+#endif
+
 #define SERIAL  0x0
 #define DISPLAY 0x1
 
@@ -222,6 +226,12 @@ bool hardware_attach_spi(hw_handle_t hw, uint8_t port);
 /// @param port The I2C port to attach to
 /// @return True if successful, otherwise false
 bool hardware_attach_i2c(hw_handle_t hw, uint8_t port);
+/// @brief Attaches a UART to a COM port
+/// @param uart_no The uart number. 0 is Serial, 1 is Serial1, 2 is Serial2, etc
+/// @param com_port_no The COM port. 1 is COM1, 2 is COM2, 3 is COM3, etc
+/// @return True if successful, otherwise false
+bool hardware_attach_serial(uint8_t uart_no,uint16_t com_port_no);
+
 /// @brief indicates the current uart for the logging window
 extern int hardware_log_uart;
 #include <algorithm>

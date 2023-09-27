@@ -38,6 +38,9 @@ HardwareSerial Serial1(1);
 #if SOC_UART_NUM > 2
 HardwareSerial Serial2(2);
 #endif
+#if SOC_UART_NUM > 3
+HardwareSerial Serial3(3);
+#endif
 
 void serialEventRun(void)
 {

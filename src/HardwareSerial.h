@@ -218,6 +218,9 @@ extern HardwareSerial Serial1;
 #if SOC_UART_NUM > 2
 extern HardwareSerial Serial2;
 #endif
+#if SOC_UART_NUM > 3
+extern HardwareSerial Serial3;
+#endif
 #endif
 
 #endif // HardwareSerial_h

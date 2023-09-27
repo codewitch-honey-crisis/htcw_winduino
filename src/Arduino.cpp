@@ -193,6 +193,11 @@ typedef struct gpio {
         }
     }
 } gpio_t;
+typedef enum uart_state {
+    UART_STATE_UNATTACHED,
+    UART_STATE_CLOSED,
+    UART_STATE_OPEN
+} uart_state_t;
 
 static hardware_dev_t* hardware_head;
 static hardware_spi_list_t* spi_devices[SPI_PORT_MAX] = {nullptr};
@@ -211,6 +216,8 @@ static HWND hwnd_log;
 static HWND hwnd_main;
 static bool updating_gpios = false;
 int hardware_log_uart = 0;
+static uint16_t uart_com_ports[SOC_UART_NUM] = {0};
+static uart_state_t uart_states[SOC_UART_NUM] = {UART_STATE_UNATTACHED};
 HMENU menu;
 HMENU gpio_menu;
 // flag to indicate quitting
@@ -998,5 +1005,18 @@ bool hardware_attach_i2c(hw_handle_t hw, uint8_t port) {
             p = p->next;
         }
     }
+    return true;
+}
+bool hardware_attach_serial(uint8_t uart_no,uint16_t com_port_no) {
+    if(uart_no>=SOC_UART_NUM||com_port_no==0) {
+        return false;
+    }
+    if(uart_states[uart_no]!=UART_STATE_UNATTACHED) {
+        return false;
+    }
+    // we don't validate that the com port # is valid here
+    // because a com port device may be connected later
+    uart_com_ports[uart_no]=com_port_no;
+    uart_states[uart_no]=UART_STATE_CLOSED;
     return true;
 }
