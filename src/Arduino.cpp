@@ -210,7 +210,7 @@ static HANDLE app_mutex = NULL;
 static HWND hwnd_log;
 static HWND hwnd_main;
 static bool updating_gpios = false;
-
+int hardware_log_uart = 0;
 HMENU menu;
 HMENU gpio_menu;
 // flag to indicate quitting

@@ -222,6 +222,8 @@ bool hardware_attach_spi(hw_handle_t hw, uint8_t port);
 /// @param port The I2C port to attach to
 /// @return True if successful, otherwise false
 bool hardware_attach_i2c(hw_handle_t hw, uint8_t port);
+/// @brief indicates the current uart for the logging window
+extern int hardware_log_uart;
 #include <algorithm>
 #include <cmath>
 #include <math.h>

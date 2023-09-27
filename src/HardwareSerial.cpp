@@ -229,21 +229,25 @@ void HardwareSerial::flush(bool txOnly)
 
 size_t HardwareSerial::write(uint8_t c)
 {
-    char sz[2];
-    sz[1]=0;
-    sz[0]=(char)c;
-    append_log_window(sz);
+    if(_uart_nr==hardware_log_uart) {
+        char sz[2];
+        sz[1]=0;
+        sz[0]=(char)c;
+        append_log_window(sz);
+    }
     return 1;
 }
 
 size_t HardwareSerial::write(const uint8_t *buffer, size_t size)
 {
-    char* buf = (char*)malloc(size+1);
-    if(buf==NULL) return 0;
-    memcpy(buf,buffer,size);
-    buf[size]=0;
-    append_log_window(buf);
-    free(buf);
+    if(_uart_nr==hardware_log_uart) {
+        char* buf = (char*)malloc(size+1);
+        if(buf==NULL) return 0;
+        memcpy(buf,buffer,size);
+        buf[size]=0;
+        append_log_window(buf);
+        free(buf);
+    }
     return size;
 }
 uint32_t  HardwareSerial::baudRate()
