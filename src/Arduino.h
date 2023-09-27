@@ -130,15 +130,7 @@ static const uint8_t D10 = 11;
 typedef void* hw_handle_t;
 // useful for libs like LVGL that can't use DirectX native format
 // #define USE_RGBA8888
-constexpr static const struct {
-    int width;
-    int height;
-} winduino_screen_size = 
-#ifdef SCREEN_SIZE
-SCREEN_SIZE;
-#else
-{320,240};
-#endif
+
 typedef __cdecl void(*hardware_log_callback)(const char* text);
 /// @brief Reports the milliseconds since the app started
 /// @return The number of milliseconds elapsed
@@ -231,6 +223,12 @@ bool hardware_attach_i2c(hw_handle_t hw, uint8_t port);
 /// @param com_port_no The COM port. 1 is COM1, 2 is COM2, 3 is COM3, etc
 /// @return True if successful, otherwise false
 bool hardware_attach_serial(uint8_t uart_no,uint16_t com_port_no);
+
+/// @brief Sets the size of the integrated screen. Must be called from the winduino() function
+/// @param width the width
+/// @param height the height
+/// @return True if successful, otherwise false
+bool hardware_set_screen_size(uint16_t width, uint16_t height);
 
 /// @brief indicates the current uart for the logging window
 extern int hardware_log_uart;

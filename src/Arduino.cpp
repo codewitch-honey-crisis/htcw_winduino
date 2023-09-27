@@ -199,6 +199,11 @@ typedef enum uart_state {
     UART_STATE_OPEN
 } uart_state_t;
 
+static struct {
+    int width;
+    int height;
+} winduino_screen_size = {320,240};
+
 static hardware_dev_t* hardware_head;
 static hardware_spi_list_t* spi_devices[SPI_PORT_MAX] = {nullptr};
 static hardware_i2c_list_t* i2c_devices[I2C_PORT_MAX] = {nullptr};
@@ -592,6 +597,9 @@ int main(int argc, char* argv[]) {
     wc.lpszClassName = L"Winduino_GPIO";
     RegisterClassW(&wc);
     HWND hwnd_dx;
+    // run winduino init code if present
+    winduino();
+
     RECT r = {0, 0, winduino_screen_size.width * 2, winduino_screen_size.height - 1};
     // adjust the size of the window so
     // the above is our client rect
@@ -621,6 +629,7 @@ int main(int argc, char* argv[]) {
     mif.dwTypeData = wcsmenu;
     mif.hSubMenu = gpio_menu;
     InsertMenuItemW(menu, 0, TRUE, &mif);
+
     // create the main window
     hwnd_main = CreateWindowExW(
         WS_EX_APPWINDOW, L"Winduino", L"Winduino",
@@ -659,6 +668,7 @@ int main(int argc, char* argv[]) {
     if (app_mutex == NULL) {
         goto exit;
     }
+    
     // start DirectX
     hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2d_factory);
     assert(hr == S_OK);
@@ -705,8 +715,6 @@ int main(int argc, char* argv[]) {
     UpdateWindow(hwnd_main);
     // for the frame counter
     SetTimer(hwnd_main, 0, 1000, NULL);
-    // run winduino init code if present
-    winduino();
 
     // this is the thread where the actual rendering
     // takes place and where loop() is run
@@ -1019,4 +1027,12 @@ bool hardware_attach_serial(uint8_t uart_no,uint16_t com_port_no) {
     uart_com_ports[uart_no]=com_port_no;
     uart_states[uart_no]=UART_STATE_CLOSED;
     return true;
+}
+bool hardware_set_screen_size(uint16_t width, uint16_t height) {
+    if(hwnd_main==NULL && width!=0 && height!=0) {
+        winduino_screen_size.width = width;
+        winduino_screen_size.height = height;
+        return true;
+    }
+    return false;
 }
