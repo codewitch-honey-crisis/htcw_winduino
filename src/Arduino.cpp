@@ -451,7 +451,22 @@ void delayMicroseconds(uint32_t us) {
 
 // write to the log window
 void append_log_window(const char* text) {
+    static wchar_t sz[65536];
+    if(text==nullptr || text[0]==0) {
+        return;
+    }
     int index = GetWindowTextLength(hwnd_log);
+    LRESULT len = SendMessageW(hwnd_log,EM_GETLIMITTEXT,0,0);
+    while(index+strlen(text)>=len) {
+        GetWindowTextW(hwnd_log,sz,sizeof(sz));
+        wchar_t* l = wcschr(sz,'\n');
+        if(l==nullptr) {
+            SetWindowTextW(hwnd_log,L"");
+            break;
+        }
+        SetWindowTextW(hwnd_log,l+1);
+        index = wcslen(l+1);
+    }
     // SetFocus (hwnd_log); // set focus
     SendMessageA(hwnd_log, EM_SETSEL, (WPARAM)index, (LPARAM)index);  // set selection - end of text
     SendMessageA(hwnd_log, EM_REPLACESEL, 0, (LPARAM)text);           // append!
