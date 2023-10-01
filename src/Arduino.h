@@ -139,7 +139,7 @@ static const uint8_t D9 = 10;
 static const uint8_t D10 = 11;
 typedef void* hw_handle_t;
 // useful for libs like LVGL that can't use DirectX native format
-// #define USE_RGBA8888
+// #define USE_RGB
 
 typedef __cdecl void(*hardware_log_callback)(const char* text);
 /// @brief Reports the milliseconds since the app started
