@@ -789,6 +789,7 @@ int main(int argc, char* argv[]) {
                 ensure_gpio_window((uint8_t)~msg.wParam);
                 // Serial.printf("selected %d\r\n",~msg.wParam);
             }
+            
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
@@ -797,6 +798,21 @@ int main(int argc, char* argv[]) {
         }
     }
 exit:
+#if SOC_UART_NUM > 0
+    Serial.end();
+#endif
+#if SOC_UART_NUM > 1
+    Serial1.end();
+#endif
+#if SOC_UART_NUM > 2
+    Serial2.end();
+#endif
+#if SOC_UART_NUM > 3
+    Serial3.end();
+#endif
+
+
+
     if (IsWindow(hwnd_dx)) {
         DestroyWindow(hwnd_dx);
     }
@@ -1026,6 +1042,24 @@ bool hardware_attach_serial(uint8_t uart_no,uint16_t com_port_no) {
     // because a com port device may be connected later
     uart_com_ports[uart_no]=com_port_no;
     uart_states[uart_no]=UART_STATE_CLOSED;
+    return true;
+}
+bool hardware_get_attached_serial(uint8_t uart_no,uint16_t* out_com_port_no) {
+    if(out_com_port_no==nullptr || uart_no>=SOC_UART_NUM) {
+        return false;
+    }
+    if(uart_states[uart_no]==UART_STATE_UNATTACHED) {
+        *out_com_port_no=0;
+        return true;
+    }
+    *out_com_port_no = uart_com_ports[uart_no];
+    return true;
+}
+bool hardware_is_open_serial(uint8_t uart_no,bool* out_open) {
+    if(out_open==nullptr || uart_no>=SOC_UART_NUM) {
+        return false;
+    }
+    *out_open = (uart_states[uart_no]==UART_STATE_OPEN);
     return true;
 }
 bool hardware_set_screen_size(uint16_t width, uint16_t height) {

@@ -44,7 +44,6 @@
 
 #ifndef HardwareSerial_h
 #define HardwareSerial_h
-
 #include <inttypes.h>
 #include <functional>
 #include "Stream.h"
@@ -186,7 +185,7 @@ public:
 
     size_t setRxBufferSize(size_t new_size);
     size_t setTxBufferSize(size_t new_size);
-
+    void update();
 protected:
     int _uart_nr;
     size_t _rxBufferSize;
@@ -196,9 +195,12 @@ protected:
     // _onReceive and _rxTimeout have be consistent when timeout is disabled
     bool _onReceiveTimeout;
     uint8_t _rxTimeout, _rxFIFOFull;
-    
+    void* _handle;
     int8_t _rxPin, _txPin, _ctsPin, _rtsPin;
-
+    void* _quit_event,*_has_quit_event,*_read_mutex,*_thread;
+    uint8_t* _rx_buffer;
+    size_t _rx_size;
+    size_t _rx_cap;
 };
 
 extern void serialEventRun(void) __attribute__((weak));

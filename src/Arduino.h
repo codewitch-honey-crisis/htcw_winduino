@@ -25,6 +25,9 @@
 #ifndef SOC_UART_NUM
 #define SOC_UART_NUM 4
 #endif
+#ifndef SERIAL_INTERFACES_COUNT
+#define SERIAL_INTERFACES_COUNT SOC_UART_NUM
+#endif
 
 #define SERIAL  0x0
 #define DISPLAY 0x1
@@ -230,6 +233,17 @@ bool hardware_attach_i2c(hw_handle_t hw, uint8_t port);
 /// @param com_port_no The COM port. 1 is COM1, 2 is COM2, 3 is COM3, etc
 /// @return True if successful, otherwise false
 bool hardware_attach_serial(uint8_t uart_no,uint16_t com_port_no);
+/// @brief Retrievs the COM port for the UART
+/// @param uart_no The uart number. 0 is Serial, 1 is Serial1, 2 is Serial2, etc
+/// @param out_com_port_no The COM port. 1 is COM1, 2 is COM2, 3 is COM3, etc
+/// @return True if successful, otherwise false.
+bool hardware_get_attached_serial(uint8_t uart_no,uint16_t* out_com_port_no);
+
+/// @brief Retrievs the COM port for the UART
+/// @param uart_no The uart number. 0 is Serial, 1 is Serial1, 2 is Serial2, etc
+/// @param out_open True if open, otherwise false
+/// @return True if successful, otherwise false.
+bool hardware_is_open_serial(uint8_t uart_no,bool* out_open);
 
 /// @brief Sets the size of the integrated screen. Must be called from the winduino() function
 /// @param width the width
