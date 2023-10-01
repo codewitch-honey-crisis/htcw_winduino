@@ -217,8 +217,8 @@ static volatile DWORD frames = 0;
 static HANDLE quit_event = NULL;
 static HANDLE app_thread = NULL;
 static HANDLE app_mutex = NULL;
-static HWND hwnd_log;
-static HWND hwnd_main;
+static HWND hwnd_log=NULL;
+static HWND hwnd_main=NULL;
 static bool updating_gpios = false;
 int hardware_log_uart = 0;
 static uint16_t uart_com_ports[SOC_UART_NUM] = {0};
@@ -239,7 +239,7 @@ static struct {
 static int mouse_state = 0;  // 0 = released, 1 = pressed
 static int old_mouse_state = 0;
 static int mouse_req = 0;
-
+static char* pre_log = nullptr;
 // updates the window title with the FPS and any mouse info
 static void update_title(HWND hwnd) {
     wchar_t wsztitle[64];
@@ -465,6 +465,25 @@ void delayMicroseconds(uint32_t us) {
 void log_print(const char* text) {
     static wchar_t sz[65536];
     if(text==nullptr || text[0]==0) {
+        return;
+    }
+    if(hwnd_log==nullptr) {
+        if(pre_log==nullptr) {
+            pre_log = (char*)malloc(strlen(text)+1);
+            if(pre_log!=nullptr) {
+                memcpy(pre_log,text,strlen(text)+1);
+            }
+            return;
+        } else {
+            size_t len_log = strlen(pre_log);
+            size_t len_txt = strlen(text);
+            size_t len = len_log+len_txt;
+            pre_log = (char*)realloc(pre_log, len+1);
+            if(pre_log==nullptr) {
+                return;
+            }
+            memcpy(pre_log+len_log,text,len_txt+1);
+        }
         return;
     }
     int index = GetWindowTextLength(hwnd_log);
@@ -715,7 +734,11 @@ int main(int argc, char* argv[]) {
     UpdateWindow(hwnd_main);
     // for the frame counter
     SetTimer(hwnd_main, 0, 1000, NULL);
-
+    if(pre_log) {
+        log_print(pre_log);
+        free(pre_log);
+        pre_log=nullptr;
+    }
     // this is the thread where the actual rendering
     // takes place and where loop() is run
     app_thread = CreateThread(NULL, 8000 * 4, render_thread_proc, NULL, 0, NULL);
