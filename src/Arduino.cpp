@@ -1055,13 +1055,6 @@ bool hardware_get_attached_serial(uint8_t uart_no,uint16_t* out_com_port_no) {
     *out_com_port_no = uart_com_ports[uart_no];
     return true;
 }
-bool hardware_is_open_serial(uint8_t uart_no,bool* out_open) {
-    if(out_open==nullptr || uart_no>=SOC_UART_NUM) {
-        return false;
-    }
-    *out_open = (uart_states[uart_no]==UART_STATE_OPEN);
-    return true;
-}
 bool hardware_set_screen_size(uint16_t width, uint16_t height) {
     if(hwnd_main==NULL && width!=0 && height!=0) {
         winduino_screen_size.width = width;
