@@ -871,7 +871,8 @@ void digitalWrite(uint8_t pin, uint8_t val) {
 }
 int digitalRead(uint8_t pin) {
     gpio_t& g = gpios[pin];
-    if (g.mode == INPUT || g.mode == INPUT_PULLUP || g.mode == INPUT_PULLDOWN) {
+    // can check state on output pins too
+    if (g.mode==OUTPUT || g.mode == OUTPUT_OPEN_DRAIN || g.mode == INPUT || g.mode == INPUT_PULLUP || g.mode == INPUT_PULLDOWN) {
         return g.value() == LOW ? LOW : HIGH;
     }
     return LOW;
